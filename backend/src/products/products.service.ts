@@ -5,9 +5,9 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ProductsService {
@@ -35,14 +35,14 @@ export class ProductsService {
     const { page, limit, search } = params;
     const skip = (page - 1) * limit;
 
-    const where: Record<string, any> = {};
-
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { sku: { contains: search, mode: 'insensitive' } },
-      ];
-    }
+    const where: Prisma.ProductWhereInput = search
+      ? {
+          OR: [
+            { name: { contains: search, mode: 'insensitive' } },
+            { sku: { contains: search, mode: 'insensitive' } },
+          ],
+        }
+      : {};
 
     const [products, total] = await Promise.all([
       this.prisma.product.findMany({
@@ -61,8 +61,14 @@ export class ProductsService {
       this.prisma.product.count({ where }),
     ]);
 
+    // Convert Decimal to number manually
+    const transformedProducts = products.map(product => ({
+      ...product,
+      price: product.price ? parseFloat(product.price.toString()) : 0,
+    }));
+
     return {
-      data: products,
+      data: transformedProducts,
       meta: {
         page,
         limit,
@@ -90,7 +96,11 @@ export class ProductsService {
       throw new NotFoundException('Product not found');
     }
 
-    return product;
+    // Convert Decimal to number
+    return {
+      ...product,
+      price: product.price ? parseFloat(product.price.toString()) : 0,
+    };
   }
 
   async findBySku(sku: string) {
@@ -102,7 +112,11 @@ export class ProductsService {
       throw new NotFoundException('Product not found');
     }
 
-    return product;
+    // Convert Decimal to number
+    return {
+      ...product,
+      price: product.price ? parseFloat(product.price.toString()) : 0,
+    };
   }
 
   async update(id: string, updateProductDto: UpdateProductDto) {
@@ -138,7 +152,7 @@ export class ProductsService {
       },
     });
 
-    if ((productWithSales?.saleItems?.length ?? 0) > 0) {
+    if (productWithSales.saleItems.length > 0) {
       throw new BadRequestException(
         'Cannot delete product with existing sales. Consider deactivating instead.',
       );

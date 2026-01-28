@@ -11,4 +11,7 @@ export class RegisterDto {
   @IsString()
   @IsOptional()
   name?: string;
+  
+  // Add this to allow confirmPassword but ignore it
+  confirmPassword?: string;
 }

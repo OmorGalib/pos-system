@@ -55,10 +55,14 @@ export class SalesService {
         }),
       );
 
-      // Calculate total amount
-      const totalAmount = productValidations.reduce(
+      // Calculate total amount - convert itemPrice to number (handles Decimal)
+      const totalAmount = productValidations.reduce<number>(
         (sum, validation) =>
-          sum + validation.itemPrice.toNumber() * validation.requestedQuantity,
+          sum +
+          (typeof validation.itemPrice === 'number'
+            ? validation.itemPrice
+            : parseFloat(validation.itemPrice?.toString() || '0')) *
+            validation.requestedQuantity,
         0,
       );
 
@@ -115,7 +119,8 @@ export class SalesService {
   }) {
     const { page, limit, startDate, endDate } = params;
     const skip = (page - 1) * limit;
-    const where: Record<string, any> = {};
+
+    const where: Prisma.SaleWhereInput = {};
 
     if (startDate || endDate) {
       where.createdAt = {};
@@ -151,15 +156,22 @@ export class SalesService {
       this.prisma.sale.count({ where }),
     ]);
 
-    return {
-      data: sales.map(sale => ({
-        ...sale,
-        totalAmount: sale.totalAmount.toNumber(),
-        items: sale.items.map(item => ({
-          ...item,
-          price: item.price.toNumber(),
-        })),
+    // Convert prices to numbers (safe conversion for both Decimal and Float)
+    const transformedSales = sales.map(sale => ({
+      ...sale,
+      totalAmount: typeof sale.totalAmount === 'number' 
+        ? sale.totalAmount 
+        : parseFloat(sale.totalAmount?.toString() || '0'),
+      items: sale.items.map(item => ({
+        ...item,
+        price: typeof item.price === 'number'
+          ? item.price
+          : parseFloat(item.price?.toString() || '0'),
       })),
+    }));
+
+    return {
+      data: transformedSales,
       meta: {
         page,
         limit,
@@ -196,10 +208,14 @@ export class SalesService {
 
     return {
       ...sale,
-      totalAmount: sale.totalAmount.toNumber(),
+      totalAmount: typeof sale.totalAmount === 'number'
+        ? sale.totalAmount
+        : parseFloat(sale.totalAmount?.toString() || '0'),
       items: sale.items.map(item => ({
         ...item,
-        price: item.price.toNumber(),
+        price: typeof item.price === 'number'
+          ? item.price
+          : parseFloat(item.price?.toString() || '0'),
       })),
     };
   }
@@ -261,7 +277,12 @@ export class SalesService {
         });
         return {
           ...item,
-          product,
+          product: product ? {
+            ...product,
+            price: typeof product.price === 'number'
+              ? product.price
+              : parseFloat(product.price?.toString() || '0'),
+          } : null,
         };
       }),
     );
@@ -269,13 +290,19 @@ export class SalesService {
     return {
       summary: {
         totalSales,
-        totalRevenue: totalRevenue._sum.totalAmount?.toNumber() || 0,
+        totalRevenue: typeof totalRevenue._sum.totalAmount === 'number'
+          ? totalRevenue._sum.totalAmount
+          : parseFloat(totalRevenue._sum.totalAmount?.toString() || '0'),
         todaySales,
-        todayRevenue: todayRevenue._sum.totalAmount?.toNumber() || 0,
+        todayRevenue: typeof todayRevenue._sum.totalAmount === 'number'
+          ? todayRevenue._sum.totalAmount
+          : parseFloat(todayRevenue._sum.totalAmount?.toString() || '0'),
       },
       lowStockProducts: lowStockProducts.map(product => ({
         ...product,
-        price: product.price.toNumber(),
+        price: typeof product.price === 'number'
+          ? product.price
+          : parseFloat(product.price?.toString() || '0'),
       })),
       topProducts: topProductsWithDetails,
     };
@@ -300,7 +327,9 @@ export class SalesService {
 
     return {
       count: result._count,
-      revenue: result._sum.totalAmount?.toNumber() || 0,
+      revenue: typeof result._sum.totalAmount === 'number'
+        ? result._sum.totalAmount
+        : parseFloat(result._sum.totalAmount?.toString() || '0'),
     };
   }
 }
