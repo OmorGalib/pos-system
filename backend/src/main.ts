@@ -28,7 +28,7 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
 
-  const port = configService.get('PORT', 3001);
+  const port = process.env.PORT || 3001;
   await app.listen(port);
   
   console.log(`🚀 Server running in ${process.env.NODE_ENV} mode`);
