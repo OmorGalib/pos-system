@@ -24,6 +24,21 @@ import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 
+const formatNumber = (
+  value: number | string,
+  currency = false
+) => {
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+
+  if (isNaN(num)) return '0';
+
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: currency ? 2 : 0,
+    maximumFractionDigits: currency ? 2 : 0,
+  }).format(num);
+};
+
+
 interface DashboardStats {
   summary: {
     totalSales: number;
@@ -79,7 +94,7 @@ const DashboardPage: React.FC = () => {
   const statCards = [
     {
       title: 'Total Sales',
-      value: statsData.summary.totalSales,
+      value: formatNumber(statsData.summary.totalSales),
       icon: <ShoppingCartOutlined />,
       color: '#1890ff',
       change: '+12%',
@@ -87,7 +102,7 @@ const DashboardPage: React.FC = () => {
     },
     {
       title: 'Total Revenue',
-      value: `$${statsData.summary.totalRevenue.toFixed(2)}`,
+      value: `$ ${formatNumber(statsData.summary.totalRevenue, true)}`,
       icon: <DollarOutlined />,
       color: '#52c41a',
       change: '+8%',
@@ -95,7 +110,7 @@ const DashboardPage: React.FC = () => {
     },
     {
       title: 'Today Sales',
-      value: statsData.summary.todaySales,
+      value: formatNumber(statsData.summary.todaySales),
       icon: <ShoppingCartOutlined />,
       color: '#722ed1',
       change: statsData.summary.todaySales > 0 ? '+100%' : '0%',
@@ -103,7 +118,7 @@ const DashboardPage: React.FC = () => {
     },
     {
       title: 'Low Stock Items',
-      value: lowStockCount,
+      value: formatNumber(lowStockCount),
       icon: <WarningOutlined />,
       color: '#fa8c16',
       change: lowStockCount > 0 ? 'Need attention' : 'All good',
@@ -140,7 +155,7 @@ const DashboardPage: React.FC = () => {
         render: (price: any) => {
             // Convert to number if it's a string
             const priceNum = typeof price === 'string' ? parseFloat(price) : price;
-            return `$${priceNum.toFixed(2)}`;
+            return `$ ${formatNumber(priceNum, true)}`;
         },
         sorter: (a: Product, b: Product) => {
             const priceA = typeof a.price === 'string' ? parseFloat(a.price) : a.price;
@@ -162,7 +177,7 @@ const DashboardPage: React.FC = () => {
       dataIndex: 'totalAmount',
       key: 'totalAmount',
       render: (amount: number) => (
-        <Text strong>${amount.toFixed(2)}</Text>
+        <Text strong>$ {formatNumber(amount, true)}</Text>
       ),
     },
     {

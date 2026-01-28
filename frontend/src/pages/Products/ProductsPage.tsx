@@ -27,28 +27,31 @@ import { useProducts } from '../../hooks/useProducts';
 
 const { Title } = Typography;
 
-// Helper function to safely convert price to number
-const safePrice = (price: any): number => {
-  if (typeof price === 'string') {
-    return parseFloat(price);
-  }
-  if (typeof price === 'number') {
-    return price;
-  }
-  return 0;
+const formatNumber = (value: number | string, currency = false) => {
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+
+  if (isNaN(num)) return currency ? '$0.00' : '0';
+
+  return (
+    (currency ? '$' : '') +
+    new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: currency ? 2 : 0,
+      maximumFractionDigits: currency ? 2 : 0,
+    }).format(num)
+  );
 };
 
-// Helper function to format price
-const formatPrice = (price: any): string => {
-  const priceNum = safePrice(price);
-  return `$${priceNum.toFixed(2)}`;
+const safeNumber = (value: any): number => {
+  if (typeof value === 'string') return parseFloat(value);
+  if (typeof value === 'number') return value;
+  return 0;
 };
 
 interface Product {
   id: string;
   name: string;
   sku: string;
-  price: any; // Can be string or number
+  price: any;
   stockQuantity: number;
   createdAt: string;
   updatedAt: string;
@@ -92,7 +95,6 @@ const ProductsPage: React.FC = () => {
 
   const handleSubmit = async (values: any) => {
     try {
-      // Ensure price is a number
       const productData = {
         ...values,
         price: typeof values.price === 'string' ? parseFloat(values.price) : values.price,
@@ -116,7 +118,7 @@ const ProductsPage: React.FC = () => {
     setEditingProduct(product);
     form.setFieldsValue({
       ...product,
-      price: safePrice(product.price), // Convert to number for form
+      price: safeNumber(product.price),
       stockQuantity: product.stockQuantity,
     });
     setModalVisible(true);
@@ -154,8 +156,8 @@ const ProductsPage: React.FC = () => {
       dataIndex: 'price',
       key: 'price',
       width: 120,
-      render: (price: any) => formatPrice(price),
-      sorter: (a: Product, b: Product) => safePrice(a.price) - safePrice(b.price),
+      render: (price: any) => formatNumber(price, true),
+      sorter: (a: Product, b: Product) => safeNumber(a.price) - safeNumber(b.price),
     },
     {
       title: 'Stock',
@@ -174,7 +176,7 @@ const ProductsPage: React.FC = () => {
               : 'green'
           }
         >
-          {quantity} units
+          {formatNumber(quantity)} units
         </Tag>
       ),
       sorter: (a: Product, b: Product) => a.stockQuantity - b.stockQuantity,
@@ -407,7 +409,7 @@ const ProductsPage: React.FC = () => {
               <Col span={12}>
                 <div>
                   <Typography.Text strong>Price:</Typography.Text>
-                  <div>{formatPrice(viewingProduct.price)}</div>
+                  <div>{formatNumber(viewingProduct.price, true)}</div>
                 </div>
               </Col>
               <Col span={12}>
@@ -435,8 +437,7 @@ const ProductsPage: React.FC = () => {
               <Col span={12}>
                 <div>
                   <Typography.Text strong>Total Sales:</Typography.Text>
-                  <div>{viewingProduct._count?.saleItems || 0} items sold</div>
-                </div>
+                  <div>{formatNumber(viewingProduct._count?.saleItems || 0)} items sold</div>                </div>
               </Col>
               <Col span={12}>
                 <div>

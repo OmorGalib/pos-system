@@ -48,7 +48,7 @@ const RegisterPage: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        background: 'linear-gradient(135deg, #9ffb93ff 0%, #f5576c 100%)',
         padding: '20px',
       }}
     >

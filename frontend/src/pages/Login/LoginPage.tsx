@@ -39,8 +39,8 @@ const LoginPage: React.FC = () => {
     setFormError('');
     try {
       await login(values);
-    } catch (err: any) {
-      setFormError(err.message || 'Login failed. Please try again.');
+    }catch (err: any) {
+      setFormError(err?.message || 'Invalid email or password');
     }
   };
 
@@ -90,16 +90,6 @@ const LoginPage: React.FC = () => {
           />
         )}
 
-        {error && !formError && (
-          <Alert
-            message="Login failed"
-            description={error.message}
-            type="error"
-            showIcon
-            style={{ marginBottom: 24 }}
-          />
-        )}
-
         <Form
           name="login"
           onFinish={onFinish}
@@ -116,6 +106,7 @@ const LoginPage: React.FC = () => {
             <Input
               prefix={<UserOutlined />}
               placeholder="Email"
+              onChange={() => setFormError('')}
               autoComplete="email"
             />
           </Form.Item>
@@ -127,6 +118,7 @@ const LoginPage: React.FC = () => {
             <Input.Password
               prefix={<LockOutlined />}
               placeholder="Password"
+              onChange={() => setFormError('')}
               autoComplete="current-password"
             />
           </Form.Item>
@@ -142,16 +134,6 @@ const LoginPage: React.FC = () => {
               Sign In
             </Button>
           </Form.Item>
-
-          <div style={{ textAlign: 'center', marginTop: 24 }}>
-            <Text type="secondary">Demo Credentials:</Text>
-            <div style={{ marginTop: 8 }}>
-              <Text code>admin@pos.com</Text>
-              <Text code style={{ marginLeft: 8 }}>
-                admin123
-              </Text>
-            </div>
-          </div>
 
           <Divider>
             <Text type="secondary">OR</Text>

@@ -36,6 +36,21 @@ interface SaleItem {
   product?: Product;
 }
 
+const formatNumber = (value: number | string, currency = false) => {
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+
+  if (isNaN(num)) return currency ? '$0.00' : '0';
+
+  return (
+    (currency ? '$' : '') +
+    new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: currency ? 2 : 0,
+      maximumFractionDigits: currency ? 2 : 0,
+    }).format(num)
+  );
+};
+
+
 const SalesPage: React.FC = () => {
   const [saleModalVisible, setSaleModalVisible] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<SaleItem[]>([]);
@@ -210,7 +225,7 @@ const SalesPage: React.FC = () => {
       width: 120,
       render: (amount: number) => (
         <Text strong style={{ color: '#52c41a' }}>
-          ${amount.toFixed(2)}
+          {formatNumber(amount, true)}
         </Text>
       ),
       sorter: (a: Sale, b: Sale) => a.totalAmount - b.totalAmount,
@@ -258,7 +273,7 @@ const SalesPage: React.FC = () => {
                   <div style={{ marginBottom: 16 }}>
                     <Text strong>Total Amount: </Text>
                     <Text strong style={{ color: '#52c41a' }}>
-                      ${record.totalAmount.toFixed(2)}
+                      {formatNumber(record.totalAmount, true)}
                     </Text>
                   </div>
                   <Table
@@ -283,7 +298,7 @@ const SalesPage: React.FC = () => {
                         dataIndex: 'price',
                         key: 'price',
                         width: 100,
-                        render: (price: number) => `$${price?.toFixed(2)}`,
+                        render: (price: number) => formatNumber(price, true),
                       },
                       {
                         title: 'Quantity',
@@ -297,7 +312,7 @@ const SalesPage: React.FC = () => {
                         width: 120,
                         render: (_: any, item: any) => (
                           <Text strong>
-                            ${((item.price || 0) * item.quantity).toFixed(2)}
+                            {formatNumber((item.price || 0) * item.quantity, true)}
                           </Text>
                         ),
                       },
@@ -335,7 +350,7 @@ const SalesPage: React.FC = () => {
               prefix={<DollarOutlined />}
               precision={2}
               valueStyle={{ color: '#52c41a' }}
-              formatter={(value) => `$${value}`}
+              formatter={(value) => formatNumber(value as number, true)}
             />
           </Card>
         </Col>
@@ -357,7 +372,7 @@ const SalesPage: React.FC = () => {
               prefix={<DollarOutlined />}
               precision={2}
               valueStyle={{ color: '#fa8c16' }}
-              formatter={(value) => `$${value}`}
+              formatter={(value) => formatNumber(value as number, true)}
             />
           </Card>
         </Col>
@@ -482,7 +497,7 @@ const SalesPage: React.FC = () => {
               size="small"
               extra={
                 <Text strong style={{ fontSize: 16 }}>
-                  Total: ${calculateTotal().toFixed(2)}
+                  Total: {formatNumber(calculateTotal(), true)}
                 </Text>
               }
             >
@@ -520,10 +535,10 @@ const SalesPage: React.FC = () => {
                           <Col>
                             <Space>
                               <Text>
-                                {item.quantity} × ${product.price.toFixed(2)}
+                                {item.quantity} × {formatNumber(product.price, true)}
                               </Text>
                               <Text strong style={{ color: '#52c41a' }}>
-                                ${(item.quantity * product.price).toFixed(2)}
+                                {formatNumber(item.quantity * product.price, true)}
                               </Text>
                               <Button
                                 type="text"
@@ -551,7 +566,7 @@ const SalesPage: React.FC = () => {
                     block
                     disabled={createSaleMutation.isPending}
                   >
-                    Complete Sale (${calculateTotal().toFixed(2)})
+                    Complete Sale ({formatNumber(calculateTotal(), true)})
                   </Button>
                 </div>
               )}

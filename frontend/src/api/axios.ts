@@ -34,9 +34,12 @@ api.interceptors.response.use(
     if (response) {
       switch (response.status) {
         case 401:
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('user');
-          window.location.href = '/login';
+          // ONLY redirect if already logged in
+          if (localStorage.getItem('access_token')) {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+          }
           break;
         case 403:
           console.error('Forbidden:', response.data.message);

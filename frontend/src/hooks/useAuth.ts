@@ -12,9 +12,6 @@ export const useAuth = () => {
       loginStore(data.user, data.access_token);
       message.success('Login successful!');
     },
-    onError: (error: any) => {
-      message.error(error.message || 'Login failed');
-    },
   });
 
   const registerMutation = useMutation({
@@ -34,10 +31,12 @@ export const useAuth = () => {
   };
 
   return {
-    login: loginMutation.mutate,
-    register: registerMutation.mutate,
+    login: loginMutation.mutateAsync,
+    register: registerMutation.mutateAsync,
     logout,
     isLoading: loginMutation.isPending || registerMutation.isPending,
     error: loginMutation.error || registerMutation.error,
   };
+
+
 };
