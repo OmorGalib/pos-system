@@ -19,14 +19,13 @@ import { SalesModule } from './sales/sales.module';
       isGlobal: true,
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
-        store: await redisStore({
-          socket: {
-            host: configService.get('REDIS_HOST', 'localhost'),
-            port: configService.get('REDIS_PORT', 6379),
-          },
-          password: configService.get('REDIS_PASSWORD'),
-          ttl: configService.get('REDIS_TTL', 3600),
-        }),
+        store: redisStore,
+        host: configService.get('REDIS_HOST'),
+        port: configService.get('REDIS_PORT'),
+        password: configService.get('REDIS_PASSWORD'),
+        username: configService.get('REDIS_USER'),
+        tls: configService.get('REDIS_TLS') === 'true' ? {} : undefined,
+        no_ready_check: true,
       }),
       inject: [ConfigService],
     }),

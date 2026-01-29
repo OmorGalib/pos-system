@@ -1,7 +1,6 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
-import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -10,7 +9,6 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       'http://localhost:5173',
-      'https://pos-frontend-ktbh.onrender.com',
       process.env.FRONTEND_URL
     ],
     credentials: true,
@@ -19,6 +17,13 @@ async function bootstrap() {
   });
   
   const port = process.env.PORT || 3001;
-  await app.listen(port);
+  try {
+    await app.listen(port);
+    Logger.log(`🚀 Application running on port ${port}`, 'Bootstrap');
+    Logger.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL}`, 'Bootstrap');
+    Logger.log(`🔗 Health check: http://localhost:${port}/health`, 'Bootstrap');
+  } catch (error) {
+    Logger.error('Failed to start application:', error);
+  }
 }
 bootstrap();

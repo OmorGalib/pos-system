@@ -7,6 +7,8 @@ export class AppController {
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
+      service: 'POS Backend API',
+      environment: process.env.NODE_ENV,
     };
   }
 
