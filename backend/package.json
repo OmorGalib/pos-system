@@ -5,17 +5,13 @@
   "author": "",
   "private": true,
   "license": "UNLICENSED",
-  "scripts": {
+    "scripts": {
     "build": "nest build",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
-    "start:prod": "node dist/src/main",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:deploy": "prisma migrate deploy",
-    "prisma:studio": "prisma studio",
-    "postinstall": "npm run prisma:generate"
+    "start:prod": "node dist/main",
+    "prebuild": "npx prisma generate",
+    "postbuild": "npx prisma migrate deploy"
   },
   "dependencies": {
     "@nestjs/cache-manager": "^3.1.0",
