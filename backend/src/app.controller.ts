@@ -17,7 +17,6 @@ export class AppController {
     return {
       message: 'Welcome to POS System API',
       version: '1.0.0',
-      docs: '/api/docs',
       health: '/health',
     };
   }
