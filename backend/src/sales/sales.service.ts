@@ -9,6 +9,19 @@ import { Prisma } from '@prisma/client';
 import dayjs from 'dayjs';
 import { CreateSaleDto } from './dto/create-sale.dto';
 
+function toNumber(value: any): number {
+  if (value instanceof Decimal) {
+    return value.toNumber();
+  }
+  if (typeof value === 'number') {
+    return value;
+  }
+  if (typeof value === 'string') {
+    return parseFloat(value);
+  }
+  return 0;
+}
+
 @Injectable()
 export class SalesService {
   constructor(
@@ -132,55 +145,56 @@ export class SalesService {
       }
     }
 
-    const [sales, total] = await Promise.all([
-      this.prisma.sale.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: 'desc' },
-        include: {
-          items: {
-            include: {
-              product: {
-                select: {
-                  id: true,
-                  name: true,
-                  sku: true,
-                  price: true,
+    try {
+      const [sales, total] = await Promise.all([
+        this.prisma.sale.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            items: {
+              include: {
+                product: {
+                  select: {
+                    id: true,
+                    name: true,
+                    sku: true,
+                    price: true,
+                  },
                 },
               },
             },
           },
+        }),
+        this.prisma.sale.count({ where }),
+      ]);
+
+      // Simplified conversion
+      const transformedSales = sales.map(sale => ({
+        ...sale,
+        totalAmount: toNumber(sale.totalAmount),
+        items: sale.items.map(item => ({
+          ...item,
+          price: toNumber(item.price),
+        })),
+      }));
+
+      return {
+        data: transformedSales,
+        meta: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+          hasNextPage: page * limit < total,
+          hasPreviousPage: page > 1,
         },
-      }),
-      this.prisma.sale.count({ where }),
-    ]);
-
-    // Convert prices to numbers (safe conversion for both Decimal and Float)
-    const transformedSales = sales.map(sale => ({
-      ...sale,
-      totalAmount: typeof sale.totalAmount === 'number' 
-        ? sale.totalAmount 
-        : parseFloat(sale.totalAmount?.toString() || '0'),
-      items: sale.items.map(item => ({
-        ...item,
-        price: typeof item.price === 'number'
-          ? item.price
-          : parseFloat(item.price?.toString() || '0'),
-      })),
-    }));
-
-    return {
-      data: transformedSales,
-      meta: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-        hasNextPage: page * limit < total,
-        hasPreviousPage: page > 1,
-      },
-    };
+      };
+    } catch (error) {
+      console.error('Error in findAll:', error);
+      throw error;
+    }
   }
 
   async findOne(id: string) {
@@ -222,92 +236,88 @@ export class SalesService {
 
   async getDashboardStats() {
     const today = dayjs().startOf('day').toDate();
-    const yesterday = dayjs().subtract(1, 'day').startOf('day').toDate();
-
-    const [
-      totalSales,
-      totalRevenue,
-      todaySales,
-      todayRevenue,
-      lowStockProducts,
-      topProducts,
-    ] = await Promise.all([
-      this.prisma.sale.count(),
-      this.prisma.sale.aggregate({
-        _sum: { totalAmount: true },
-      }),
-      this.prisma.sale.count({
-        where: { createdAt: { gte: today } },
-      }),
-      this.prisma.sale.aggregate({
-        where: { createdAt: { gte: today } },
-        _sum: { totalAmount: true },
-      }),
-      this.prisma.product.findMany({
-        where: { stockQuantity: { lt: 10 } },
-        take: 5,
-        orderBy: { stockQuantity: 'asc' },
-        select: {
-          id: true,
-          name: true,
-          sku: true,
-          stockQuantity: true,
-          price: true,
-        },
-      }),
-      this.prisma.saleItem.groupBy({
-        by: ['productId'],
-        _sum: { quantity: true },
-        _count: true,
-        take: 5,
-        orderBy: { _sum: { quantity: 'desc' } },
-      }),
-    ]);
-
-    // Get product details for top products
-    const topProductsWithDetails = await Promise.all(
-      topProducts.map(async (item) => {
-        const product = await this.prisma.product.findUnique({
-          where: { id: item.productId },
+    
+    try {
+      const [
+        totalSales,
+        totalRevenue,
+        todaySales,
+        todayRevenue,
+        lowStockProducts,
+        topProducts,
+      ] = await Promise.all([
+        this.prisma.sale.count(),
+        this.prisma.sale.aggregate({
+          _sum: { totalAmount: true },
+        }),
+        this.prisma.sale.count({
+          where: { createdAt: { gte: today } },
+        }),
+        this.prisma.sale.aggregate({
+          where: { createdAt: { gte: today } },
+          _sum: { totalAmount: true },
+        }),
+        this.prisma.product.findMany({
+          where: { stockQuantity: { lt: 10 } },
+          take: 5,
+          orderBy: { stockQuantity: 'asc' },
           select: {
+            id: true,
             name: true,
             sku: true,
+            stockQuantity: true,
             price: true,
           },
-        });
-        return {
-          ...item,
-          product: product ? {
-            ...product,
-            price: typeof product.price === 'number'
-              ? product.price
-              : parseFloat(product.price?.toString() || '0'),
-          } : null,
-        };
-      }),
-    );
+        }),
+        this.prisma.saleItem.groupBy({
+          by: ['productId'],
+          _sum: { quantity: true },
+          _count: true,
+          take: 5,
+          orderBy: { _sum: { quantity: 'desc' } },
+        }),
+      ]);
 
-    return {
-      summary: {
-        totalSales,
-        totalRevenue: typeof totalRevenue._sum.totalAmount === 'number'
-          ? totalRevenue._sum.totalAmount
-          : parseFloat(totalRevenue._sum.totalAmount?.toString() || '0'),
-        todaySales,
-        todayRevenue: typeof todayRevenue._sum.totalAmount === 'number'
-          ? todayRevenue._sum.totalAmount
-          : parseFloat(todayRevenue._sum.totalAmount?.toString() || '0'),
-      },
-      lowStockProducts: lowStockProducts.map(product => ({
-        ...product,
-        price: typeof product.price === 'number'
-          ? product.price
-          : parseFloat(product.price?.toString() || '0'),
-      })),
-      topProducts: topProductsWithDetails,
-    };
+      // Get product details for top products
+      const topProductsWithDetails = await Promise.all(
+        topProducts.map(async (item) => {
+          const product = await this.prisma.product.findUnique({
+            where: { id: item.productId },
+            select: {
+              name: true,
+              sku: true,
+              price: true,
+            },
+          });
+          return {
+            ...item,
+            product: product ? {
+              ...product,
+              price: toNumber(product.price),
+            } : null,
+          };
+        }),
+      );
+
+      return {
+        summary: {
+          totalSales,
+          totalRevenue: toNumber(totalRevenue._sum.totalAmount),
+          todaySales,
+          todayRevenue: toNumber(todayRevenue._sum.totalAmount),
+        },
+        lowStockProducts: lowStockProducts.map(product => ({
+          ...product,
+          price: toNumber(product.price),
+        })),
+        topProducts: topProductsWithDetails,
+      };
+    } catch (error) {
+      console.error('Error in getDashboardStats:', error);
+      throw error;
+    }
   }
-
+  
   async getTodayRevenue() {
     const today = dayjs().startOf('day').toDate();
     const tomorrow = dayjs().add(1, 'day').startOf('day').toDate();

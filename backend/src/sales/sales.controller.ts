@@ -9,6 +9,7 @@ import {
   DefaultValuePipe,
   ParseUUIDPipe,
   Param,
+  Logger,
 } from '@nestjs/common';
 import { Transform } from 'class-transformer';
 import { IsOptional, IsDateString } from 'class-validator';
@@ -37,6 +38,7 @@ class GetSalesQueryDto {
 @Controller('sales')
 @UseGuards(JwtAuthGuard)
 export class SalesController {
+  private readonly logger = new Logger(SalesController.name);
   constructor(private readonly salesService: SalesService) {}
 
   @Post()
@@ -45,23 +47,38 @@ export class SalesController {
   }
 
   @Get()
-  findAll(@Query() query: GetSalesQueryDto) {
-    return this.salesService.findAll({
-      page: query.page || 1,
-      limit: query.limit || 10,
-      startDate: query.startDate ? new Date(query.startDate) : undefined,
-      endDate: query.endDate ? new Date(query.endDate) : undefined,
-    });
+  async findAll(@Query() query: GetSalesQueryDto) {
+    try {
+      this.logger.log(`Fetching sales with query: ${JSON.stringify(query)}`);
+      const result = await this.salesService.findAll({
+        page: query.page || 1,
+        limit: query.limit || 10,
+        startDate: query.startDate ? new Date(query.startDate) : undefined,
+        endDate: query.endDate ? new Date(query.endDate) : undefined,
+      });
+      this.logger.log(`Found ${result.data.length} sales`);
+      return result;
+    } catch (error) {
+      this.logger.error('Error fetching sales:', error);
+      throw error;
+    }
+  }
+
+  @Get('dashboard/stats')
+  async getDashboardStats() {
+    try {
+      this.logger.log('Fetching dashboard stats');
+      const stats = await this.salesService.getDashboardStats();
+      return stats;
+    } catch (error) {
+      this.logger.error('Error fetching dashboard stats:', error);
+      throw error;
+    }
   }
 
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.salesService.findOne(id);
-  }
-
-  @Get('dashboard/stats')
-  getDashboardStats() {
-    return this.salesService.getDashboardStats();
   }
 
   @Get('today/revenue')

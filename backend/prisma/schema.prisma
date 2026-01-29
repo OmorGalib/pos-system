@@ -37,8 +37,6 @@ model Sale {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   items       SaleItem[]
-
-  @@map("sales")
 }
 
 model SaleItem {
@@ -47,9 +45,9 @@ model SaleItem {
   productId String
   quantity  Int
   price     Decimal @db.Decimal(10, 2)
+  
   sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
   product   Product @relation(fields: [productId], references: [id])
-
+  
   @@unique([saleId, productId])
-  @@map("sale_items")
 }

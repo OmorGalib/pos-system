@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { message } from '../../node_modules/antd/es/index';
 
 const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001';
 
@@ -29,10 +30,21 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response.data,
   (error) => {
-    const { response } = error;
+    const { response, config } = error;
+    
+    console.error('API Error:', {
+      url: config?.url,
+      method: config?.method,
+      status: response?.status,
+      data: response?.data,
+    });
     
     if (response) {
       switch (response.status) {
+        case 500:
+          console.error('Server Error Details:', response.data);
+          message.error('Server error occurred. Please try again later.');
+          break;
         case 401:
           // ONLY redirect if already logged in
           if (localStorage.getItem('access_token')) {
@@ -47,16 +59,9 @@ api.interceptors.response.use(
         case 404:
           console.error('Not Found:', response.data.message);
           break;
-        case 500:
-          console.error('Server Error:', response.data.message);
-          break;
         default:
           console.error('Error:', response.data.message);
       }
-    } else if (error.code === 'ECONNABORTED') {
-      console.error('Request timeout');
-    } else if (error.message === 'Network Error') {
-      console.error('Network Error - Please check your connection');
     }
     
     return Promise.reject(error.response?.data || error);
