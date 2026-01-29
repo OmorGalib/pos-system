@@ -8,6 +8,7 @@ import { ProductsService } from '../products/products.service';
 import { Prisma } from '@prisma/client';
 import dayjs from 'dayjs';
 import { CreateSaleDto } from './dto/create-sale.dto';
+import { Decimal } from '@prisma/client/runtime/library';
 
 function toNumber(value: any): number {
   if (value instanceof Decimal) {

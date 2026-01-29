@@ -74,6 +74,10 @@ const DashboardPage: React.FC = () => {
   const { data: recentSales, isLoading: salesLoading } = useQuery({
     queryKey: ['recent-sales'],
     queryFn: () => salesAPI.getAll({ limit: 5 }),
+    retry: 1, // Only retry once
+    onError: (error) => {
+      console.error('Failed to fetch recent sales:', error);
+    },
   });
 
   const { data: products, isLoading: productsLoading } = useQuery({
