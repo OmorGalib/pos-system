@@ -4,7 +4,6 @@ import { SalesController } from './sales.controller';
 import { SalesService } from './sales.service';
 
 @Module({
-  imports: [ProductsModule],
   controllers: [SalesController],
   providers: [SalesService],
   exports: [SalesService],

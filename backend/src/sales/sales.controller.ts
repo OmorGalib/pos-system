@@ -10,6 +10,9 @@ import {
   ParseUUIDPipe,
   Param,
   Logger,
+  HttpException,
+  HttpStatus,
+  NotFoundException,
 } from '@nestjs/common';
 import { Transform } from 'class-transformer';
 import { IsOptional, IsDateString } from 'class-validator';
@@ -39,11 +42,22 @@ class GetSalesQueryDto {
 @UseGuards(JwtAuthGuard)
 export class SalesController {
   private readonly logger = new Logger(SalesController.name);
+  
   constructor(private readonly salesService: SalesService) {}
 
   @Post()
-  create(@Body() createSaleDto: CreateSaleDto) {
-    return this.salesService.create(createSaleDto);
+  async create(@Body() createSaleDto: CreateSaleDto) {
+    try {
+      this.logger.log('Creating new sale');
+      const result = await this.salesService.create(createSaleDto);
+      return result;
+    } catch (error) {
+      this.logger.error('Error creating sale:', error);
+      throw new HttpException(
+        error.message || 'Failed to create sale',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Get()
@@ -60,7 +74,11 @@ export class SalesController {
       return result;
     } catch (error) {
       this.logger.error('Error fetching sales:', error);
-      throw error;
+      this.logger.error('Error stack:', error.stack);
+      throw new HttpException(
+        error.message || 'Failed to fetch sales',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -72,17 +90,44 @@ export class SalesController {
       return stats;
     } catch (error) {
       this.logger.error('Error fetching dashboard stats:', error);
-      throw error;
+      this.logger.error('Error stack:', error.stack);
+      throw new HttpException(
+        error.message || 'Failed to fetch dashboard stats',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.salesService.findOne(id);
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+    try {
+      this.logger.log(`Fetching sale with id: ${id}`);
+      const sale = await this.salesService.findOne(id);
+      return sale;
+    } catch (error) {
+      this.logger.error(`Error fetching sale ${id}:`, error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new HttpException(
+        error.message || 'Failed to fetch sale',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   @Get('today/revenue')
-  getTodayRevenue() {
-    return this.salesService.getTodayRevenue();
+  async getTodayRevenue() {
+    try {
+      this.logger.log('Fetching today\'s revenue');
+      const revenue = await this.salesService.getTodayRevenue();
+      return revenue;
+    } catch (error) {
+      this.logger.error('Error fetching today\'s revenue:', error);
+      throw new HttpException(
+        error.message || 'Failed to fetch today\'s revenue',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 }

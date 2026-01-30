@@ -4,22 +4,32 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ProductsService } from '../products/products.service';
 import { Prisma } from '@prisma/client';
 import dayjs from 'dayjs';
 import { CreateSaleDto } from './dto/create-sale.dto';
-import { Decimal } from '@prisma/client/runtime/library';
 
+// Helper function to safely convert any value to number
 function toNumber(value: any): number {
-  if (value instanceof Decimal) {
-    return value.toNumber();
+  if (value === null || value === undefined) {
+    return 0;
   }
+  
+  // If it's already a number
   if (typeof value === 'number') {
     return value;
   }
-  if (typeof value === 'string') {
-    return parseFloat(value);
+  
+  // If it's a Prisma Decimal
+  if (value && typeof value === 'object' && 'toNumber' in value) {
+    return value.toNumber();
   }
+  
+  // If it's a string
+  if (typeof value === 'string') {
+    const num = parseFloat(value);
+    return isNaN(num) ? 0 : num;
+  }
+  
   return 0;
 }
 
@@ -27,7 +37,6 @@ function toNumber(value: any): number {
 export class SalesService {
   constructor(
     private prisma: PrismaService,
-    private productsService: ProductsService,
   ) {}
 
   async create(createSaleDto: CreateSaleDto) {
@@ -64,19 +73,15 @@ export class SalesService {
           return {
             product,
             requestedQuantity: item.quantity,
-            itemPrice: product.price,
+            itemPrice: toNumber(product.price),
           };
         }),
       );
 
-      // Calculate total amount - convert itemPrice to number (handles Decimal)
-      const totalAmount = productValidations.reduce<number>(
+      // Calculate total amount
+      const totalAmount = productValidations.reduce(
         (sum, validation) =>
-          sum +
-          (typeof validation.itemPrice === 'number'
-            ? validation.itemPrice
-            : parseFloat(validation.itemPrice?.toString() || '0')) *
-            validation.requestedQuantity,
+          sum + validation.itemPrice * validation.requestedQuantity,
         0,
       );
 
@@ -171,13 +176,24 @@ export class SalesService {
         this.prisma.sale.count({ where }),
       ]);
 
-      // Simplified conversion
+      // Convert all Decimal values to numbers
       const transformedSales = sales.map(sale => ({
         ...sale,
+        id: sale.id,
         totalAmount: toNumber(sale.totalAmount),
+        createdAt: sale.createdAt,
+        updatedAt: sale.updatedAt,
         items: sale.items.map(item => ({
           ...item,
+          id: item.id,
+          saleId: item.saleId,
+          productId: item.productId,
+          quantity: item.quantity,
           price: toNumber(item.price),
+          product: item.product ? {
+            ...item.product,
+            price: toNumber(item.product.price),
+          } : null,
         })),
       }));
 
@@ -194,7 +210,7 @@ export class SalesService {
       };
     } catch (error) {
       console.error('Error in findAll:', error);
-      throw error;
+      throw new Error(`Failed to fetch sales: ${error.message}`);
     }
   }
 
@@ -223,14 +239,14 @@ export class SalesService {
 
     return {
       ...sale,
-      totalAmount: typeof sale.totalAmount === 'number'
-        ? sale.totalAmount
-        : parseFloat(sale.totalAmount?.toString() || '0'),
+      totalAmount: toNumber(sale.totalAmount),
       items: sale.items.map(item => ({
         ...item,
-        price: typeof item.price === 'number'
-          ? item.price
-          : parseFloat(item.price?.toString() || '0'),
+        price: toNumber(item.price),
+        product: item.product ? {
+          ...item.product,
+          price: toNumber(item.product.price),
+        } : null,
       })),
     };
   }
@@ -315,7 +331,7 @@ export class SalesService {
       };
     } catch (error) {
       console.error('Error in getDashboardStats:', error);
-      throw error;
+      throw new Error(`Failed to fetch dashboard stats: ${error.message}`);
     }
   }
   
@@ -323,24 +339,27 @@ export class SalesService {
     const today = dayjs().startOf('day').toDate();
     const tomorrow = dayjs().add(1, 'day').startOf('day').toDate();
 
-    const result = await this.prisma.sale.aggregate({
-      where: {
-        createdAt: {
-          gte: today,
-          lt: tomorrow,
+    try {
+      const result = await this.prisma.sale.aggregate({
+        where: {
+          createdAt: {
+            gte: today,
+            lt: tomorrow,
+          },
         },
-      },
-      _sum: {
-        totalAmount: true,
-      },
-      _count: true,
-    });
+        _sum: {
+          totalAmount: true,
+        },
+        _count: true,
+      });
 
-    return {
-      count: result._count,
-      revenue: typeof result._sum.totalAmount === 'number'
-        ? result._sum.totalAmount
-        : parseFloat(result._sum.totalAmount?.toString() || '0'),
-    };
+      return {
+        count: result._count,
+        revenue: toNumber(result._sum.totalAmount),
+      };
+    } catch (error) {
+      console.error('Error in getTodayRevenue:', error);
+      throw new Error(`Failed to fetch today's revenue: ${error.message}`);
+    }
   }
 }

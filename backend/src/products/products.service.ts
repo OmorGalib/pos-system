@@ -9,6 +9,27 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Prisma } from '@prisma/client';
 
+function toNumber(value: any): number {
+  if (value === null || value === undefined) {
+    return 0;
+  }
+  
+  if (typeof value === 'number') {
+    return value;
+  }
+  
+  if (value && typeof value === 'object' && 'toNumber' in value) {
+    return value.toNumber();
+  }
+  
+  if (typeof value === 'string') {
+    const num = parseFloat(value);
+    return isNaN(num) ? 0 : num;
+  }
+  
+  return 0;
+}
+
 @Injectable()
 export class ProductsService {
   constructor(private prisma: PrismaService) {}
@@ -64,7 +85,7 @@ export class ProductsService {
     // Convert Decimal to number manually
     const transformedProducts = products.map(product => ({
       ...product,
-      price: product.price ? parseFloat(product.price.toString()) : 0,
+      price: toNumber(product.price),
     }));
 
     return {
@@ -99,7 +120,7 @@ export class ProductsService {
     // Convert Decimal to number
     return {
       ...product,
-      price: product.price ? parseFloat(product.price.toString()) : 0,
+      price: toNumber(product.price),
     };
   }
 
