@@ -14,29 +14,9 @@ import {
   HttpStatus,
   NotFoundException,
 } from '@nestjs/common';
-import { Transform } from 'class-transformer';
-import { IsOptional, IsDateString } from 'class-validator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { SalesService } from './sales.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
-
-class GetSalesQueryDto {
-  @IsOptional()
-  @Transform(({ value }) => parseInt(value))
-  page?: number;
-
-  @IsOptional()
-  @Transform(({ value }) => parseInt(value))
-  limit?: number;
-
-  @IsOptional()
-  @IsDateString()
-  startDate?: string;
-
-  @IsOptional()
-  @IsDateString()
-  endDate?: string;
-}
 
 @Controller('sales')
 @UseGuards(JwtAuthGuard)
@@ -61,15 +41,22 @@ export class SalesController {
   }
 
   @Get()
-  async findAll(@Query() query: GetSalesQueryDto) {
+  async findAll(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
     try {
-      this.logger.log(`Fetching sales with query: ${JSON.stringify(query)}`);
+      this.logger.log(`Fetching sales with page: ${page}, limit: ${limit}`);
+      
       const result = await this.salesService.findAll({
-        page: query.page || 1,
-        limit: query.limit || 10,
-        startDate: query.startDate ? new Date(query.startDate) : undefined,
-        endDate: query.endDate ? new Date(query.endDate) : undefined,
+        page,
+        limit,
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined,
       });
+      
       this.logger.log(`Found ${result.data.length} sales`);
       return result;
     } catch (error) {

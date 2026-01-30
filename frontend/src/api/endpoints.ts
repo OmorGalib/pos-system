@@ -58,12 +58,41 @@ export const authAPI = {
     api.post('/auth/register', credentials),
 };
 
+export const salesAPI = {
+  getAll: (params?: {
+    page?: number;
+    limit?: number;
+    startDate?: string;
+    endDate?: string;
+  }) => {
+    // Ensure limit and page are numbers
+    const processedParams = {
+      ...params,
+      page: params?.page ? Number(params.page) : undefined,
+      limit: params?.limit ? Number(params.limit) : undefined,
+    };
+    return api.get<PaginatedResponse<Sale>>('/sales', { params: processedParams });
+  },
+  getOne: (id: string) => api.get<Sale>(`/sales/${id}`),
+  create: (data: { items: SaleItem[] }) => api.post<Sale>('/sales', data),
+  getDashboardStats: () => api.get('/sales/dashboard/stats'),
+  getTodayRevenue: () => api.get('/sales/today/revenue'),
+};
+
 export const productsAPI = {
   getAll: (params?: {
     page?: number;
     limit?: number;
     search?: string;
-  }) => api.get<PaginatedResponse<Product>>('/products', { params }),
+  }) => {
+    // Ensure limit and page are numbers
+    const processedParams = {
+      ...params,
+      page: params?.page ? Number(params.page) : undefined,
+      limit: params?.limit ? Number(params.limit) : undefined,
+    };
+    return api.get<PaginatedResponse<Product>>('/products', { params: processedParams });
+  },
   getOne: (id: string) => api.get<Product>(`/products/${id}`),
   create: (data: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) =>
     api.post<Product>('/products', data),
@@ -71,17 +100,4 @@ export const productsAPI = {
     api.patch<Product>(`/products/${id}`, data),
   delete: (id: string) => api.delete(`/products/${id}`),
   getBySku: (sku: string) => api.get<Product>(`/products/sku/${sku}`),
-};
-
-export const salesAPI = {
-  getAll: (params?: {
-    page?: number;
-    limit?: number;
-    startDate?: string;
-    endDate?: string;
-  }) => api.get<PaginatedResponse<Sale>>('/sales', { params }),
-  getOne: (id: string) => api.get<Sale>(`/sales/${id}`),
-  create: (data: { items: SaleItem[] }) => api.post<Sale>('/sales', data),
-  getDashboardStats: () => api.get('/sales/dashboard/stats'),
-  getTodayRevenue: () => api.get('/sales/today/revenue'),
 };
